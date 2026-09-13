@@ -222,3 +222,5 @@ For Windows Server 2025 / Windows 11 installation on **https://107.108.42.60:505
 For direct **Ubuntu Server 24.04 LTS** deployment, follow the [illustrated Ubuntu installation guide](docs/UBUNTU_INSTALLATION.md) for **https://107.108.42.60:5050**.
 
 For security-team presentation and production review, see the [Security Review Submission](docs/SECURITY_REVIEW.md), including the control matrix, data flows, open risks and approval record.
+
+To understand the platform and demonstrate employee, engineer and administrator workflows, see the [Product and User Guide](docs/TOOL_GUIDE.md).
