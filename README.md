@@ -218,3 +218,5 @@ In this prepared workspace, the installed test tools are under `.runtime/bin/`. 
 For **107.108.42.60**, use the [server deployment guide](docs/SERVER_DEPLOYMENT.md), [production Compose override](docker-compose.server.yml), and [server environment example](deploy/server.env.example). The server configuration serves HTTPS on port 5050, enforces secure sessions, and keeps the database and backend private. It requires an internal CA certificate valid for the server IP (or an internal hostname). Local development commands remain unchanged.
 
 For Windows Server 2025 / Windows 11 installation on **https://107.108.42.60:5050**, use the [step-by-step illustrated guide](docs/WINDOWS_INSTALLATION.md).
+
+For direct **Ubuntu Server 24.04 LTS** deployment, follow the [illustrated Ubuntu installation guide](docs/UBUNTU_INSTALLATION.md) for **https://107.108.42.60:5050**.

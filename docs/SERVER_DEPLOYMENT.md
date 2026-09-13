@@ -1,5 +1,7 @@
 # Internal server deployment: 107.108.42.60:5050
 
+For direct Ubuntu installation, use the **[illustrated Ubuntu installation guide](UBUNTU_INSTALLATION.md)** for `https://107.108.42.60:5050`.
+
 For Windows Server 2025 or Windows 11, follow the **[illustrated step-by-step Windows installation guide](WINDOWS_INSTALLATION.md)**. The instructions below cover the Linux application host.
 
 Target URL: **https://107.108.42.60:5050**. This configuration adds TLS to the existing stack, enforces production settings and secure cookies, and publishes only port 5050. Local development is unchanged. Remote installation has not yet been performed.
