@@ -1,11 +1,13 @@
-# Internal server deployment: 107.108.42.60
+# Internal server deployment: 107.108.42.60:5050
 
-Target URL: **https://107.108.42.60**. This configuration adds TLS to the existing stack, enforces production settings and secure cookies, and publishes only port 443. Local development is unchanged. Remote installation has not yet been performed.
+For Windows Server 2025 or Windows 11, follow the **[illustrated step-by-step Windows installation guide](WINDOWS_INSTALLATION.md)**. The instructions below cover the Linux application host.
+
+Target URL: **https://107.108.42.60:5050**. This configuration adds TLS to the existing stack, enforces production settings and secure cookies, and publishes only port 5050. Local development is unchanged. Remote installation has not yet been performed.
 
 ## Prerequisites
 
 - Linux server with Docker Engine and Docker Compose **2.24.4 or newer** (`docker compose version`). On Windows Server use a supported Linux VM for these Linux containers.
-- SSH access and permission to run Docker; port 443 available and permitted from the intended employee network. Keep PostgreSQL/8000/3000 closed externally.
+- SSH access and permission to run Docker; port 5050 available and permitted from the intended employee network. Keep PostgreSQL/8000/3000 closed externally.
 - A certificate issued by your organization's trusted CA. For the IP URL, its Subject Alternative Name must contain **IP:107.108.42.60**. Every employee device must trust that CA. Alternatively use an internal DNS hostname, a certificate for that hostname, and change `PUBLIC_ORIGIN` accordingly.
 - Server access to download the container images and Python packages during the first build, or an approved internal registry/package mirror.
 
@@ -56,8 +58,8 @@ The command prompts privately for a password of at least 12 characters. No defau
 ## Verify
 
 ```sh
-curl --fail https://107.108.42.60/
-curl --fail https://107.108.42.60/api/v1/openapi.json
+curl --fail https://107.108.42.60:5050/
+curl --fail https://107.108.42.60:5050/api/v1/openapi.json
 dc logs --tail=100 backend worker frontend
 ```
 

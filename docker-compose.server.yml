@@ -5,19 +5,19 @@ services:
     environment:
       ENVIRONMENT: production
       COOKIE_SECURE: "true"
-      CORS_ORIGINS: ${PUBLIC_ORIGIN:-https://107.108.42.60}
+      CORS_ORIGINS: ${PUBLIC_ORIGIN:-https://107.108.42.60:5050}
   worker:
     environment:
       ENVIRONMENT: production
       COOKIE_SECURE: "true"
-      CORS_ORIGINS: ${PUBLIC_ORIGIN:-https://107.108.42.60}
+      CORS_ORIGINS: ${PUBLIC_ORIGIN:-https://107.108.42.60:5050}
   seed:
     environment:
       ENVIRONMENT: production
       COOKIE_SECURE: "true"
   frontend:
     ports: !override
-      - "${HTTPS_PORT:-443}:443"
+      - "${HTTPS_PORT:-5050}:443"
     volumes:
       - ./deploy/nginx.conf:/etc/nginx/conf.d/default.conf:ro
       - ./deploy/tls:/etc/nginx/tls:ro
