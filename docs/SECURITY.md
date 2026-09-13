@@ -40,7 +40,7 @@ Attachments live in PostgreSQL for transactional consistency. For larger deploym
 
 ## SLA and delivery boundaries
 
-SLAs use elapsed calendar time, not business calendars. Waiting states do not pause the clock. First response is recorded when staff starts work, posts a comment or resolves/requests information. Notification delivery is in-app only. Email, Slack, Teams, SSO and MFA are extension work requiring organization-specific services and configuration.
+SLAs use elapsed calendar time, not business calendars. Waiting states do not pause the clock. First response is recorded when staff starts work, posts a comment or resolves/requests information. Notifications are in-app, with optional assignment/reassignment SMTP delivery. SMTP requires approved relay configuration and send-as authorization; see [Email and Engineer Reports](EMAIL_AND_ENGINEER_REPORTS.md). Slack, Teams, SSO and MFA remain extension work.
 
 Workflow status identities are deliberately stable. Administrators can rename their display labels and change the reopen window; arbitrary new lifecycle states require a reviewed code/schema migration. SLA changes apply to new tickets, priority changes and reopened tickets rather than rewriting historic deadlines.
 

@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import date, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, select, update
@@ -215,5 +215,203 @@ def read(
     if not n or n.user_id != user.id:
         raise HTTPException(404, "Notification not found")
     n.read = True
+    db.commit()
+    return {"success": True}
+
+
+@router.get("/admin/engineer-activity")
+def engineer_activity(
+    engineer_id: int | None = None,
+    event: str = Query("all", pattern="^(all|assigned|completed)$"),
+    search: str = Query("", max_length=200),
+    date_from: date | None = None,
+    date_to: date | None = None,
+    offset: int = Query(0, ge=0),
+    limit: int = Query(25, ge=1, le=100),
+    export: bool = False,
+    user: User = Depends(require(*ADMINS)),
+    db: Session = Depends(get_db),
+):
+    """Historical events, not current assignee snapshots; completion means RESOLVED."""
+    import csv
+    import io
+    from datetime import datetime, time, timezone
+
+    from fastapi import Response
+    from sqlalchemy import literal, or_, union_all
+    from sqlalchemy.orm import aliased
+
+    from app.models.entities import StatusHistory, TicketAssignment
+    from app.services.audit import audit
+
+    if date_from and date_to and date_from > date_to:
+        raise HTTPException(422, "Start date must not be after end date")
+    assignments = select(
+        TicketAssignment.id.label("event_id"),
+        TicketAssignment.ticket_id.label("ticket_id"),
+        TicketAssignment.engineer_id.label("engineer_id"),
+        TicketAssignment.actor_id.label("actor_id"),
+        TicketAssignment.created_at.label("occurred_at"),
+        literal("assigned").label("event"),
+        TicketAssignment.reason.label("details"),
+    ).where(TicketAssignment.engineer_id != None)
+    completed = select(
+        StatusHistory.id.label("event_id"),
+        StatusHistory.ticket_id.label("ticket_id"),
+        StatusHistory.actor_id.label("engineer_id"),
+        StatusHistory.actor_id.label("actor_id"),
+        StatusHistory.created_at.label("occurred_at"),
+        literal("completed").label("event"),
+        literal("Ticket resolved").label("details"),
+    ).where(StatusHistory.status == "RESOLVED")
+    events = union_all(assignments, completed).subquery()
+    person, actor = aliased(User), aliased(User)
+    stmt = (
+        select(
+            events,
+            Ticket.number,
+            Ticket.title,
+            Ticket.status.label("current_status"),
+            person.name.label("engineer"),
+            person.email.label("engineer_email"),
+            actor.name.label("actor"),
+        )
+        .join(Ticket, Ticket.id == events.c.ticket_id)
+        .join(person, person.id == events.c.engineer_id)
+        .outerjoin(actor, actor.id == events.c.actor_id)
+    )
+    if engineer_id is not None:
+        stmt = stmt.where(events.c.engineer_id == engineer_id)
+    if event != "all":
+        stmt = stmt.where(events.c.event == event)
+    if search:
+        term = f"%{search}%"
+        stmt = stmt.where(
+            or_(
+                Ticket.number.ilike(term),
+                Ticket.title.ilike(term),
+                person.name.ilike(term),
+                person.email.ilike(term),
+            )
+        )
+    if date_from:
+        stmt = stmt.where(
+            events.c.occurred_at >= datetime.combine(date_from, time.min, timezone.utc)
+        )
+    if date_to:
+        stmt = stmt.where(
+            events.c.occurred_at
+            < datetime.combine(date_to + timedelta(days=1), time.min, timezone.utc)
+        )
+    total = db.scalar(select(func.count()).select_from(stmt.subquery()))
+    if export and total > 10000:
+        raise HTTPException(
+            422, "Export exceeds 10,000 events. Narrow the date or engineer filters."
+        )
+    rows = [
+        dict(r)
+        for r in db.execute(
+            stmt.order_by(events.c.occurred_at.desc(), events.c.event, events.c.event_id.desc())
+            .offset(0 if export else offset)
+            .limit(10000 if export else limit)
+        ).mappings()
+    ]
+    if not export:
+        return {"items": rows, "total": total}
+    output = io.StringIO()
+    fields = [
+        "occurred_at",
+        "event",
+        "number",
+        "title",
+        "engineer",
+        "engineer_email",
+        "actor",
+        "current_status",
+        "details",
+    ]
+    writer = csv.writer(output)
+    writer.writerow(fields)
+    for row in rows:
+        values = []
+        for key in fields:
+            value = row[key]
+            value = str(value.value if hasattr(value, "value") else value or "")
+            values.append(
+                "'" + value
+                if value.lstrip().startswith(("=", "+", "-", "@", "\t", "\r", "\n"))
+                else value
+            )
+        writer.writerow(values)
+    audit(
+        db,
+        user.id,
+        "ENGINEER_REPORT_EXPORTED",
+        "report",
+        "engineer-activity",
+        after={
+            "rows": total,
+            "engineer_id": engineer_id,
+            "event": event,
+            "date_from": str(date_from),
+            "date_to": str(date_to),
+        },
+    )
+    db.commit()
+    return Response(
+        "\ufeff" + output.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": 'attachment; filename="engineer-activity.csv"'},
+    )
+
+
+@router.get("/admin/email-deliveries")
+def email_deliveries(
+    offset: int = Query(0, ge=0),
+    limit: int = Query(25, ge=1, le=100),
+    user: User = Depends(require(*ADMINS)),
+    db: Session = Depends(get_db),
+):
+    from app.core.config import settings
+    from app.models.entities import EmailDelivery
+
+    stmt = (
+        select(EmailDelivery, Ticket.number, User.email)
+        .select_from(EmailDelivery)
+        .join(Ticket, Ticket.id == EmailDelivery.ticket_id)
+        .join(User, User.id == EmailDelivery.recipient_id)
+    )
+    return {
+        "enabled": settings.smtp_enabled,
+        "total": db.scalar(select(func.count()).select_from(EmailDelivery)),
+        "items": [
+            {
+                "id": d.id,
+                "ticket": n,
+                "recipient": email,
+                "status": d.status,
+                "attempts": d.attempts,
+                "last_error": d.last_error,
+                "sent_at": d.sent_at,
+            }
+            for d, n, email in db.execute(
+                stmt.order_by(EmailDelivery.id.desc()).offset(offset).limit(limit)
+            )
+        ],
+    }
+
+
+@router.post("/admin/email-deliveries/{delivery_id}/retry")
+def retry_email(
+    delivery_id: int, user: User = Depends(require(*ADMINS)), db: Session = Depends(get_db)
+):
+    from app.models.entities import EmailDelivery
+    from app.services.audit import audit
+
+    d = db.get(EmailDelivery, delivery_id, with_for_update=True)
+    if not d or d.status != "failed":
+        raise HTTPException(409, "Only failed deliveries can be retried")
+    d.status, d.attempts, d.available_at = "pending", 0, now()
+    audit(db, user.id, "EMAIL_RETRY_REQUESTED", "email_delivery", d.id)
     db.commit()
     return {"success": True}

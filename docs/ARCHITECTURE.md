@@ -52,7 +52,7 @@ SLA policies are keyed by priority and define first-response and resolution targ
 
 SLA warnings are inserted by the worker with one bulk database statement and unique deduplication keys. The key includes recipient, ticket, event and deadline. Each requester/engineer receives one approaching and one breached event for a deadline. Notifications are persisted in the ticket transaction for immediate ticket events. The notification table is the in-app delivery store; additional transports should consume committed events with their own delivery/retry ledger.
 
-No email, Slack, Teams, or scheduled external messages are sent by this implementation.
+Optional assignment email is delivered by the worker through an approved SMTP relay, using the transactional `email_deliveries` queue (migration 0004). SMTP is disabled by default. Slack/Teams and inbound email are not integrated. See [Email and Engineer Reports](EMAIL_AND_ENGINEER_REPORTS.md).
 
 ## Frontend
 

@@ -145,6 +145,12 @@ def assign(db, t, engineer_id, actor, reason, automatic=False):
         {"engineer_id": engineer_id, "reason": reason, "automatic": automatic},
     )
     notify(db, t, event, "Assignment updated", extra=[previous] if previous else [])
+    if engineer_id and engineer_id != previous:
+        from app.core.config import settings
+        from app.models.entities import EmailDelivery
+
+        if settings.smtp_enabled:
+            db.add(EmailDelivery(ticket_id=t.id, recipient_id=engineer_id, event=event))
 
 
 def auto_assign(db, t, actor):

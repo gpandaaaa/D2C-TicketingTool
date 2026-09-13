@@ -175,3 +175,7 @@ Use an isolated staging deployment containing synthetic data. Assign identifiers
 | Sign-off names and date | Pending |
 
 Preparation of this document does not grant approval. Retain the completed review and evidence in the organization's approved security review system.
+
+## Assignment email change addendum
+
+The subsequent [Email and Engineer Reports extension](EMAIL_AND_ENGINEER_REPORTS.md) adds configurable SMTP assignment emails and administrative historical report export. Its outbound data flow, secret configuration, delivery semantics and approval dependencies supersede the earlier statement that no external email transport exists. SMTP remains disabled until configured; corporate mailbox delivery has not been verified. Review this additional transport before production enablement.

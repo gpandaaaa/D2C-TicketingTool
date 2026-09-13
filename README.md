@@ -224,3 +224,5 @@ For direct **Ubuntu Server 24.04 LTS** deployment, follow the [illustrated Ubunt
 For security-team presentation and production review, see the [Security Review Submission](docs/SECURITY_REVIEW.md), including the control matrix, data flows, open risks and approval record.
 
 To understand the platform and demonstrate employee, engineer and administrator workflows, see the [Product and User Guide](docs/TOOL_GUIDE.md).
+
+Assignment emails from `itecom.d2c@samsung.com` and the administrator **Engineer activity** tracker are described in [Email and Engineer Reports](docs/EMAIL_AND_ENGINEER_REPORTS.md). SMTP relay configuration is required before mailbox delivery can be enabled; reports include historical assignments/completions and CSV downloads.

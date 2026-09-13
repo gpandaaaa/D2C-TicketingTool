@@ -326,3 +326,17 @@ class TicketRequest(Base):
     fingerprint: Mapped[str] = mapped_column(String(64))
     ticket_id: Mapped[int] = mapped_column(ForeignKey("tickets.id"), index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+
+class EmailDelivery(Base):
+    __tablename__ = "email_deliveries"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    ticket_id: Mapped[int] = mapped_column(ForeignKey("tickets.id"), index=True)
+    recipient_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
+    event: Mapped[str] = mapped_column(String(64))
+    status: Mapped[str] = mapped_column(String(20), default="pending", index=True)
+    attempts: Mapped[int] = mapped_column(Integer, default=0)
+    available_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    last_error: Mapped[str | None] = mapped_column(String(100))

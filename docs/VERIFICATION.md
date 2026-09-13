@@ -100,3 +100,9 @@ The implemented local product is functional and tested. Organization-specific HT
 The security submission identified and corrected a CSRF exemption based on the presence of any Authorization header. The exemption now follows the selected Bearer authentication path. Cookie-authenticated mutations with Basic, malformed or unsupported lowercase authorization headers still require the CSRF token.
 
 After this correction, `.runtime/bin/pytest -q` passed **42 SQLite tests**, with **1 PostgreSQL-only skip** and the same two upstream deprecation warnings. Ruff checks passed for the changed authentication dependency and tests. The PostgreSQL suite and browser acceptance were not rerun for this addendum; their earlier results above remain historical evidence. See [Security Review Submission](SECURITY_REVIEW.md) for review findings and production dependencies.
+
+## Assignment email and engineer tracker addendum
+
+The extended PostgreSQL suite passed **47 tests** (two upstream deprecation warnings). It covers queued assignment mail, rollback, retry exhaustion/manual retry, stale-recipient cancellation, SMTP message/STARTTLS adapter behavior, administrator report/export permissions, filtering, pagination and export audit records. SMTP adapter tests use a test double; corporate relay/inbox delivery remains unverified pending configuration.
+
+Docker rebuild/startup passed and the live PostgreSQL schema upgraded to **0004**. Browser acceptance verified the Engineer activity screen, completed-event filter, CSV download and disabled-email state with no page errors. Local screenshot: `artifacts/engineer-activity.png`. This does not demonstrate delivery through Samsung's mail infrastructure.

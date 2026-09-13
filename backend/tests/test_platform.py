@@ -787,3 +787,152 @@ def test_successful_logins_do_not_throttle_shared_office_ip(env):
             "/api/v1/auth/login", json={"email": "p4@example.local", "password": PASSWORD}
         )
         assert response.status_code == 200
+
+
+def test_assignment_email_queue_retry_and_cancellation(env, ticket_payload, monkeypatch):
+    from app.core.config import settings
+    from app.models.entities import EmailDelivery
+    from app.services.email import deliver_pending
+
+    monkeypatch.setattr(settings, "smtp_enabled", True)
+    ticket = create(env, ticket_payload)
+    with env["db"]() as db:
+        row = db.scalar(select(EmailDelivery))
+        assert row.ticket_id == ticket["id"] and row.recipient_id == ticket["assignee_id"]
+
+        def fail(*args):
+            raise RuntimeError("secret SMTP response")
+
+        deliver_pending(db, fail)
+        assert row.attempts == 1 and row.status == "pending"
+        assert row.last_error == "RuntimeError"
+        row.available_at = now() - timedelta(seconds=1)
+        db.commit()
+        sent = []
+        deliver_pending(db, lambda d, t, u: sent.append(u.id))
+        assert sent == [ticket["assignee_id"]] and row.status == "sent"
+        deliver_pending(db, lambda *args: pytest.fail("duplicate send"))
+        db.add(
+            EmailDelivery(
+                ticket_id=ticket["id"], recipient_id=env["people"][4].id, event="TICKET_ASSIGNED"
+            )
+        )
+        db.commit()
+        deliver_pending(db, lambda *args: pytest.fail("stale assignment sent"))
+        assert (
+            db.scalar(select(EmailDelivery).order_by(EmailDelivery.id.desc())).status == "cancelled"
+        )
+
+
+def test_engineer_activity_report_and_email_permissions(env, ticket_payload):
+    ticket = create(env, ticket_payload)
+    admin = env["client"]()
+    engineer = env["client"](ticket["assignee_id"] - 1)
+    assert (
+        engineer.patch(
+            f"/api/v1/tickets/{ticket['id']}", json={"status": "IN_PROGRESS"}
+        ).status_code
+        == 200
+    )
+    assert (
+        engineer.patch(
+            f"/api/v1/tickets/{ticket['id']}",
+            json={"status": "RESOLVED", "resolution": "Fixed VPN"},
+        ).status_code
+        == 200
+    )
+    result = admin.get(
+        "/api/v1/admin/engineer-activity", params={"engineer_id": ticket["assignee_id"]}
+    ).json()
+    assert {r["event"] for r in result["items"]} == {"assigned", "completed"}
+    assert admin.get("/api/v1/admin/engineer-activity?event=completed").json()["total"] == 1
+    assert len(admin.get("/api/v1/admin/engineer-activity?limit=1").json()["items"]) == 1
+    assert admin.get("/api/v1/admin/engineer-activity?date_from=2090-01-01").json()["total"] == 0
+    assert (
+        admin.get(
+            "/api/v1/admin/engineer-activity?date_from=2026-02-01&date_to=2026-01-01"
+        ).status_code
+        == 422
+    )
+    export = admin.get("/api/v1/admin/engineer-activity?export=true&event=completed")
+    assert export.status_code == 200 and ticket["number"] in export.text
+    assert "completed" in export.text
+    with env["db"]() as db:
+        assert db.scalar(select(AuditLog).where(AuditLog.action == "ENGINEER_REPORT_EXPORTED"))
+    for c in [engineer, env["client"](4)]:
+        assert c.get("/api/v1/admin/engineer-activity?export=true").status_code == 403
+        assert c.get("/api/v1/admin/email-deliveries").status_code == 403
+        assert c.post("/api/v1/admin/email-deliveries/1/retry").status_code == 403
+    assert admin.get("/api/v1/admin/email-deliveries").status_code == 200
+
+
+def test_smtp_message_and_transport(env, ticket_payload, monkeypatch):
+    from app.core.config import settings
+    from app.models.entities import EmailDelivery
+    from app.services import email
+
+    ticket = create(env, ticket_payload)
+    calls = []
+
+    class SMTP:
+        def __init__(self, *args, **kwargs):
+            calls.append("connect")
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            pass
+
+        def starttls(self, **kwargs):
+            calls.append("tls")
+
+        def login(self, *args):
+            calls.append("login")
+
+        def send_message(self, message):
+            calls.append(message)
+
+    monkeypatch.setattr(email.smtplib, "SMTP", SMTP)
+    monkeypatch.setattr(settings, "smtp_security", "starttls")
+    monkeypatch.setattr(settings, "smtp_username", "service")
+    monkeypatch.setattr(settings, "smtp_password", "secret")
+    with env["db"]() as db:
+        t = db.get(Ticket, ticket["id"])
+        email.send_assignment(EmailDelivery(id=42), t, db.get(User, t.assignee_id))
+    assert calls[:3] == ["connect", "tls", "login"]
+    message = calls[-1]
+    assert message["From"] == "itecom.d2c@samsung.com"
+    assert f"/#/tickets/{ticket['id']}" in message.get_content()
+    assert "secret" not in message.as_string()
+
+
+def test_email_failed_retry_and_transaction_rollback(env, ticket_payload, monkeypatch):
+    from app.core.config import settings
+    from app.models.entities import EmailDelivery
+    from app.services.email import deliver_pending
+    from app.services.tickets import assign
+
+    monkeypatch.setattr(settings, "smtp_enabled", True)
+    ticket = create(env, ticket_payload)
+    with env["db"]() as db:
+        t = db.get(Ticket, ticket["id"])
+        assign(db, t, env["people"][2].id, env["people"][0].id, "Rollback test")
+        db.rollback()
+        assert db.scalar(select(func.count()).select_from(EmailDelivery)) == 1
+        row = db.scalar(select(EmailDelivery))
+        row.attempts = 4
+        db.commit()
+
+        def fail(*args):
+            raise TimeoutError("private relay detail")
+
+        deliver_pending(db, fail)
+        assert row.status == "failed" and row.attempts == 5
+        delivery_id = row.id
+    admin = env["client"]()
+    assert admin.post(f"/api/v1/admin/email-deliveries/{delivery_id}/retry").status_code == 200
+    with env["db"]() as db:
+        row = db.get(EmailDelivery, delivery_id)
+        assert row.status == "pending" and row.attempts == 0
+    assert admin.post(f"/api/v1/admin/email-deliveries/{delivery_id}/retry").status_code == 409

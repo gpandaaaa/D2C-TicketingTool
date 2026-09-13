@@ -13,6 +13,7 @@ import {
 import { dashboardPage } from "./dashboard.js";
 import { ticketsPage, createPage, detailPage } from "./tickets.js";
 import { usersPage, engineersPage, configPage, auditPage } from "./admin.js";
+import { engineerActivityPage } from "./engineer-activity.js";
 const app = document.querySelector("#app");
 let generation = 0;
 document.body.classList.toggle(
@@ -23,7 +24,7 @@ function nav(href, text, icon) {
   return `<a class="nav-item" href="#/${href}" data-nav="${href.split("?")[0]}"><span class="nav-icon">${icon}</span>${text}</a>`;
 }
 function shell() {
-  app.innerHTML = `<div class="app-layout"><aside class="sidebar"><div class="brand"><strong>SAMSUNG</strong><span class="divider"></span><span>D2C · SERVICE DESK</span></div><div class="nav-label">WORKSPACE</div>${nav("dashboard", "Overview", "◫")}${nav("tickets", "Tickets", "▤")}${nav("tickets?mine=true", "My tickets", "▣")}${admin() ? nav("tickets?assignment=unassigned", "Unassigned", "◷") : ""}${nav("create", "Create ticket", "＋")}${nav("knowledge", "Knowledge base", "▥")}${nav("reports", "Analytics", "▥")}<div class="nav-label">${admin() ? "ADMIN CONSOLE" : "ACCOUNT"}</div>${admin() ? nav("users", "Users & accounts", "♧") + nav("engineers", "Engineers", "⚙") + nav("configuration", "Configuration", "☷") + nav("audit", "Audit logs", "◴") : ""}${nav("notifications", "Notifications", "♧")}${nav("settings", "My settings", "⚙")}<div class="sidebar-footer">SAMSUNG D2C<br>Internal IT operations<br><span>Connected. Supported. Productive.</span></div></aside><div class="main-area"><header class="topbar"><button class="mobile-menu icon-button" aria-label="Open navigation">☰</button><form class="global-search"><input aria-label="Search tickets" placeholder="Search tickets, people, and more…"></form><div class="top-actions"><button class="icon-button" id="theme" aria-label="Toggle dark mode">◐</button><a class="notification-link" href="#/notifications" aria-label="Notifications">♧<span id="notification-count" class="count" hidden></span></a><div class="profile"><div class="avatar">${esc(
+  app.innerHTML = `<div class="app-layout"><aside class="sidebar"><div class="brand"><strong>SAMSUNG</strong><span class="divider"></span><span>D2C · SERVICE DESK</span></div><div class="nav-label">WORKSPACE</div>${nav("dashboard", "Overview", "◫")}${nav("tickets", "Tickets", "▤")}${nav("tickets?mine=true", "My tickets", "▣")}${admin() ? nav("tickets?assignment=unassigned", "Unassigned", "◷") : ""}${nav("create", "Create ticket", "＋")}${nav("knowledge", "Knowledge base", "▥")}${nav("reports", "Analytics", "▥")}<div class="nav-label">${admin() ? "ADMIN CONSOLE" : "ACCOUNT"}</div>${admin() ? nav("users", "Users & accounts", "♧") + nav("engineers", "Engineers", "⚙") + nav("configuration", "Configuration", "☷") + nav("audit", "Audit logs", "◴") + nav("engineer-activity", "Engineer activity", "▤") : ""}${nav("notifications", "Notifications", "♧")}${nav("settings", "My settings", "⚙")}<div class="sidebar-footer">SAMSUNG D2C<br>Internal IT operations<br><span>Connected. Supported. Productive.</span></div></aside><div class="main-area"><header class="topbar"><button class="mobile-menu icon-button" aria-label="Open navigation">☰</button><form class="global-search"><input aria-label="Search tickets" placeholder="Search tickets, people, and more…"></form><div class="top-actions"><button class="icon-button" id="theme" aria-label="Toggle dark mode">◐</button><a class="notification-link" href="#/notifications" aria-label="Notifications">♧<span id="notification-count" class="count" hidden></span></a><div class="profile"><div class="avatar">${esc(
     state.user.name
       .split(" ")
       .map((s) => s[0])
@@ -201,7 +202,7 @@ async function route() {
     );
   try {
     if (
-      ["/users", "/engineers", "/configuration", "/audit"].includes(path) &&
+      ["/users", "/engineers", "/configuration", "/audit", "/engineer-activity"].includes(path) &&
       !admin()
     )
       throw new Error("Administrator access is required.");
@@ -215,6 +216,7 @@ async function route() {
     else if (path === "/users") await usersPage(target);
     else if (path === "/engineers") await engineersPage(target);
     else if (path === "/configuration") await configPage(target);
+    else if (path === "/engineer-activity") await engineerActivityPage(target);
     else if (path === "/audit") await auditPage(target);
     else if (path === "/notifications") await notifications(target);
     else if (path === "/knowledge") await knowledge(target);

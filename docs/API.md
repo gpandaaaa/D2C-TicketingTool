@@ -103,3 +103,7 @@ Errors do not expose passwords, SQL, tokens, or stack traces:
 ```
 
 Typical statuses: 401 unauthenticated, 403 forbidden, 404 missing/out-of-scope entity, 409 invalid transition/conflict, 413 too large, 422 validation, 429 rate limit. Request IDs are returned in `X-Request-ID`. API request bodies and credentials are not written to application logs.
+
+## Engineer activity and assignment email
+
+See [Email and Engineer Reports](EMAIL_AND_ENGINEER_REPORTS.md) for the new administrator-only `/admin/engineer-activity` CSV/report endpoint, delivery monitoring and retry APIs. Assignment emails require approved SMTP configuration.

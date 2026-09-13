@@ -32,6 +32,7 @@ Permissions are enforced by the server. Hiding an Admin Console menu is not the 
 | Users & accounts | Administrator account creation, editing, roles, activation and password reset |
 | Engineers | Administrator skills, availability, capacity and workload management |
 | Configuration | Administrator category, team/location, SLA, assignment and notification settings |
+| Engineer activity | Administrator historical assignment/completion tracker, CSV reports and email delivery status |
 | Audit logs | Administrator search and review of recorded actions |
 | Notifications | Read ticket updates and follow links to tickets |
 | My settings | Maintain permitted profile details and change your password |
@@ -158,7 +159,7 @@ Overview provides operational summaries; Analytics provides additional breakdown
 
 Search ticket references, text and related identity information, then narrow results with the available status, priority, category, engineer, team/location, date, SLA and assignment filters. Search results remain subject to permissions and are paginated.
 
-Notifications include creation, assignment/reassignment, comments, status changes, resolution/closure and SLA warnings/breaches when enabled. Use **View ticket** to open the related request or **Mark all as read** to clear unread indicators. Delivery is in-app; email, Slack and Teams notifications are not connected. SLA events depend on the background worker running.
+Notifications include creation, assignment/reassignment, comments, status changes, resolution/closure and SLA warnings/breaches when enabled. Use **View ticket** to open the related request or **Mark all as read** to clear unread indicators. Notifications are in-app; assignment/reassignment emails can also be enabled with an approved SMTP relay. Slack and Teams are not connected. SLA events depend on the background worker running.
 
 Allowed attachment formats include PNG/JPG/JPEG, PDF, TXT/LOG/CSV, DOCX/XLSX and ZIP. The current default maximum is 10 MiB per file, with up to 100 attachments per ticket. The system validates format and access permissions, but does not provide antivirus scanning. Only open evidence from an appropriate source and follow your organization's endpoint/security policy.
 
