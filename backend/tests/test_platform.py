@@ -90,6 +90,16 @@ def test_csrf_and_origin(env):
     )
 
 
+@pytest.mark.parametrize("authorization", ["Basic unrelated", "garbage", "bearer unrelated"])
+def test_non_bearer_header_cannot_bypass_cookie_csrf(env, authorization):
+    c = env["client"]()
+    del c.headers["X-CSRF-Token"]
+    assert (
+        c.post("/api/v1/auth/logout", headers={"Authorization": authorization}).status_code == 403
+    )
+    assert c.get("/api/v1/me").status_code == 200
+
+
 def test_session_expiry_disabled_and_reset(env):
     admin = env["client"]()
     user = env["client"](4)

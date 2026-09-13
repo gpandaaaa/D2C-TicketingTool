@@ -94,3 +94,9 @@ These are local API/query timings, **not** production network measurements or a 
 ## Deployment boundaries
 
 The implemented local product is functional and tested. Organization-specific HTTPS ingress, restricted production database roles, backup/restore policy, observability, SSO/MFA, external notification delivery, malware scanning and business calendars are not claimed as configured. See [SECURITY.md](SECURITY.md) for the exact boundary and rollout requirements.
+
+## Security review addendum — 13 September 2026
+
+The security submission identified and corrected a CSRF exemption based on the presence of any Authorization header. The exemption now follows the selected Bearer authentication path. Cookie-authenticated mutations with Basic, malformed or unsupported lowercase authorization headers still require the CSRF token.
+
+After this correction, `.runtime/bin/pytest -q` passed **42 SQLite tests**, with **1 PostgreSQL-only skip** and the same two upstream deprecation warnings. Ruff checks passed for the changed authentication dependency and tests. The PostgreSQL suite and browser acceptance were not rerun for this addendum; their earlier results above remain historical evidence. See [Security Review Submission](SECURITY_REVIEW.md) for review findings and production dependencies.

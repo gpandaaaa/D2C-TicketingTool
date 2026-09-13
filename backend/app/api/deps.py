@@ -13,7 +13,8 @@ STAFF = ADMINS + ENGINEERS
 def current_user(request: Request, db: Session = Depends(get_db)) -> User:
     token = request.cookies.get("helpdesk_session")
     bearer = request.headers.get("authorization", "")
-    if bearer.startswith("Bearer "):
+    uses_bearer = bearer.startswith("Bearer ")
+    if uses_bearer:
         token = bearer[7:]
     session = db.get(AuthSession, digest(token)) if token else None
     if not session or utc(session.expires_at) <= now():
@@ -21,7 +22,7 @@ def current_user(request: Request, db: Session = Depends(get_db)) -> User:
     user = db.get(User, session.user_id)
     if not user or not user.active:
         raise HTTPException(401, "Account unavailable")
-    if not bearer and request.method not in ("GET", "HEAD", "OPTIONS"):
+    if not uses_bearer and request.method not in ("GET", "HEAD", "OPTIONS"):
         if request.headers.get("X-CSRF-Token") != session.csrf_token:
             raise HTTPException(403, "Invalid CSRF token")
     request.state.session = session
